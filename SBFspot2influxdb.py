@@ -94,6 +94,9 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 			push_influx_data(post_data, influxhost, influxdb)
 			post_data = ""
 
+	# Push last chunk once we're out of the loop
+	push_influx_data(post_data, influxhost, influxdb)
+
 def push_influx_data(post_data, influxhost, influxdb):
 	# Post data to influxdb, check for obvious errors
 	req_url = influxhost+"/write?db="+influxdb+"&precision=s"
