@@ -93,7 +93,6 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 		if (idx % 5000 == 0 and idx > 0):
 			push_influx_data(post_data, influxhost, influxdb)
 			post_data = ""
-			break
 
 def push_influx_data(post_data, influxhost, influxdb):
 	# Post data to influxdb, check for obvious errors
