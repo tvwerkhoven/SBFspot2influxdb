@@ -103,19 +103,20 @@ ETotal=$(lua -e "print($(echo ${LASTDATA} | cut -f ${ETotal_field} -d ${DATASEP}
 EToday=$(lua -e "print($(echo ${LASTDATA} | cut -f ${EToday_field} -d ${DATASEP}) * 1000*3600)")
 Temperature=$(echo ${LASTDATA} | cut -f ${Temperature_field} -d ${DATASEP})
 
-# Convert date to ns in UTC for influxdb. We need this in case there was no
+# Convert date to epoch (in UTC) for influxdb. We need this in case there was no
 # new data added to the file (e.g SBFspot failed), adding the timestamp will
 # silently overwrite the previous datapoint.
 #
-# We don't need to add --utc as date assumed local time and %s already 
-# converts to seconds since Epoch UTC. Multiply by 10^9 to get nanoseconds
+# - We use only the time of the datetime stamp in the file so date(1) will add
+#   the date itself. This is done because date(1) assumes MM/DD/YYYY date 
+#   formats incompatible with SBFspot log files. Alternative: use 
+#   dateutils.strptime -i "%d/%M/%Y %H:%M:%S" ${Datadate} or something similar
+# - We don't need to add --utc as %s already converts to seconds since Epoch 
+#   UTC.
+# - We use second precision (not ms/ns) which is the same resolution as 
+#   source data
 #
-# N.B. date(1) assumes the world is US-American and assumes MM/DD/YYYY 
-# formats. It's a small miracle US-American don't use MM:HH:SS format for 
-# time. Solution: ignore date, only use time. Alternative: use 
-# dateutils.strptime -i "%d/%M/%Y %H:%M:%S" ${Datadate} or something similar
-#
-# TODO: detect SBFspot failure such that we don't need this check.
+# TODO: detect SBFspot failure such that we don't need this time.
 #Datadate="11/11/2018 12:06:29"
 Datadatens=$(date -d "${Datadate##* }" +%s)
 
