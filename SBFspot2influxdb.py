@@ -83,6 +83,14 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 
 		# Convert rows into dict by adding keys from field names
 		dictrow = {key:val*f for key, val, f in zip(fields_keys, r, conv_factor)}
+
+		# For month format, set date to end of day (23:59), because we show 
+		# the day's value. Epochs don't have DST so we can simply add a fixed
+		# offset
+		if (sbfformat == "month"):
+			dictrow['TimeStamp'] += 86340
+			#datetime.datetime.fromtimestamp(r[0]) + datetime.timedelta(days=1) - datetime.timedelta(minutes=1)
+
 		# Construct line protocol string based on query template
 		post_data_line = influxquery.format(**dictrow)
 		post_data += post_data_line
