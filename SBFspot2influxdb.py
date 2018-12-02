@@ -149,7 +149,7 @@ parser.add_argument('--sbfdb', type=str, metavar="path", default=None,
 	required=True, help='SBFspot SQLite database file to read from')
 
 parser.add_argument('--influxdb', type=str, metavar=("URI", "db"),
-	default=("http://localhost:8086/", "smarthome"),
+	default=("http://localhost:8086", "smarthome"),
 	nargs=2, help="URI should point to influxdb, e.g. \
 	[http/https]://<ip>:<port>. Database: e.g. smarthome.")
 parser.add_argument('--influxquery', type=str, metavar="query",
