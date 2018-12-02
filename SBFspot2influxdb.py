@@ -146,8 +146,8 @@ parser.add_argument("--sbfformat", choices=("spot", "month"), default="month",
 	{} Spot format supports {}".format(MONTHFIELDS, SPOTFIELDS))
 parser.add_argument('--sbfcfg', type=str, metavar="SBFspot.cfg", default=None,
 	help='SBFspot configuration file')
-parser.add_argument('--sbfdb', type=str, metavar="path", default=None,
-	help='SBFspot SQLite database file to read from')
+parser.add_argument('--sbfdb', type=str, metavar="path", default=None, 
+	required=True, help='SBFspot SQLite database file to read from')
 
 parser.add_argument('--influxdb', type=str, metavar=("URI", "db"),
 	default=("http://localhost:8086/", "smarthome"),
