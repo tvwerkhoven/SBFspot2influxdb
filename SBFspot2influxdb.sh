@@ -122,8 +122,13 @@ Datadatens=$(date -d "${Datadate##* }" +%s)
 
 # Post to influxdb, add explicit timestamp to each measurement
 # https://docs.influxdata.com/influxdb/v1.7/tools/api/
-curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energy,type=elec,device=sma value=${ETotal} ${Datadatens}
-power,type=elec,device=sma value=${PacTot} ${Datadatens}
-power,type=elec,device=sma,subtype=dc value=${PdcTot} ${Datadatens}
-temperature,type=device,device=sma value=${Temperature} ${Datadatens}"
+# curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energy,type=elec,device=sma value=${ETotal} ${Datadatens}
+# power,type=elec,device=sma value=${PacTot} ${Datadatens}
+# power,type=elec,device=sma,subtype=dc value=${PdcTot} ${Datadatens}
+# temperature,type=device,device=sma value=${Temperature} ${Datadatens}"
+
+curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energyv2 sma=${ETotal} ${Datadatens}
+powerv2 sma_ac=${PacTot} ${Datadatens}
+powerv2 sma_dc=${PdcTot} ${Datadatens}
+systemv2 sma=${Temperature} ${Datadatens}"
 
