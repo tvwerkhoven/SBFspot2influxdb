@@ -127,8 +127,13 @@ Datadatens=$(date -d "${Datadate##* }" +%s)
 # power,type=elec,device=sma,subtype=dc value=${PdcTot} ${Datadatens}
 # temperature,type=device,device=sma value=${Temperature} ${Datadatens}"
 
+# New data architecture
+# curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energyv2 sma=${ETotal} ${Datadatens}
+# powerv2 sma_ac=${PacTot} ${Datadatens}
+# powerv2 sma_dc=${PdcTot} ${Datadatens}
+# systemv2 sma=${Temperature} ${Datadatens}"
+
+# No need for power, we calculate it ourselves
 curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energyv2 sma=${ETotal} ${Datadatens}
-powerv2 sma_ac=${PacTot} ${Datadatens}
-powerv2 sma_dc=${PdcTot} ${Datadatens}
 systemv2 sma=${Temperature} ${Datadatens}"
 
