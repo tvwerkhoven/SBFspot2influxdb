@@ -92,8 +92,8 @@ Temperature_field2=${Temperature_field1//[^$DATASEP]}
 Temperature_field=$((${#Temperature_field2}+1))
 
 # Get latest entries, query file only once (tail) to prevent race 
-# conditions/unique dataset
-LASTDATA=$(tail -n 1 ${DATAFILE})
+# conditions/unique dataset. Replace commas by period for lua/influxdb
+LASTDATA=$(tail -n 1 ${DATAFILE} | tr ',' '.')
 Datadate=$(echo ${LASTDATA} | cut -f 1 -d ${DATASEP})
 PdcTot=$(echo ${LASTDATA} | cut -f ${PdcTot_field} -d ${DATASEP})
 PacTot=$(echo ${LASTDATA} | cut -f ${PacTot_field} -d ${DATASEP})
