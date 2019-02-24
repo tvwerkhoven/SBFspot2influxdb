@@ -2,30 +2,66 @@
 # SBFspot2influxdb.sh
 # Call this script after running SBFspot to push updated CSV files to influxdb
 
-### Configure this
+# From https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+
+show_help () {
+	echo "${0} -h -f <DATAFILE> -c <SBFspot.cfg path> -i <influx URI>"
+}
+
+### Default configuration
 SBFCFG=/home/pi/workers/sbfspot/SBFspot.cfg
 # TODO: get this from the CSV file (might not always work?)
 DATASEP=";"
 INFLUXDBURI="http://localhost:8086/write?db=smarthome&precision=s"
 
-# Get output path from config. Use tail to skip any duplicate entries, use 
-# cut to select actual value after =, use f2- to select all fields after =, 
-# in case dirname contains =, remove trailing newline/carriage return
-CFGOUTPUTPATH=$(grep ^OutputPath= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
-CFGPLANTNAME=$(grep ^Plantname= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
-CFGCSV_Export=$(grep ^CSV_Export= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
+# A POSIX variable
+OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
-# CSV export must be enabled. Add 0 to variable in case it's empty
-if [[ $(($CFGCSV_Export+0)) -ne 1 ]]; then
-	echo "This script only works with CSV export, aborting"
-	exit
+# Initialize our own variables:
+output_file=""
+verbose=0
+
+while getopts "h?vf:" opt; do
+    case "$opt" in
+    h|\?)
+        show_help
+        exit 0
+        ;;
+    c)  SBFCFG=$OPTARG
+        ;;
+    i)  INFLUXDBURI=$OPTARG
+        ;;
+    f)  DATAFILE=$OPTARG
+        ;;
+    esac
+done
+
+shift $((OPTIND-1))
+[ "${1:-}" = "--" ] && shift
+
+# If datafile not given as argument, find ourselves
+if [ -z ${DATAFILE} ]; then
+	echo "Finding data file"
+	# Get output path from config. Use tail to skip any duplicate entries, use 
+	# cut to select actual value after =, use f2- to select all fields after =, 
+	# in case dirname contains =, remove trailing newline/carriage return
+	CFGOUTPUTPATH=$(grep ^OutputPath= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
+	CFGPLANTNAME=$(grep ^Plantname= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
+	CFGCSV_Export=$(grep ^CSV_Export= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
+
+	# CSV export must be enabled. Add 0 to variable in case it's empty
+	if [[ $(($CFGCSV_Export+0)) -ne 1 ]]; then
+		echo "This script only works with CSV export, aborting"
+		exit
+	fi
+
+	# Fill in date in path dynamically using date
+	OUTPATH=$(date +${CFGOUTPUTPATH} )
+
+	# Find file, abort if it does not exist
+	DATAFILE=${OUTPATH}/${CFGPLANTNAME}-Spot-$(date "+%Y%m%d").csv
 fi
 
-# Fill in date in path dynamically using date
-OUTPATH=$(date +${CFGOUTPUTPATH} )
-
-# Find file, abort if it does not exist
-DATAFILE=${OUTPATH}/${CFGPLANTNAME}-Spot-$(date "+%Y%m%d").csv
 if [[ ! -e ${DATAFILE} ]]; then
 	echo "Datafile for today does not exist, nothing to update, aborting"
 	exit
