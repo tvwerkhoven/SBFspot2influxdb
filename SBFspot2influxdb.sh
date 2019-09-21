@@ -171,5 +171,5 @@ Datadatens=$(date -d "${Datadate##* }" +%s)
 
 # No need for power, we calculate it ourselves
 curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energyv2 sma=${ETotal} ${Datadatens}
-systemv2 sma=${Temperature} ${Datadatens}"
+systemv2 sma_temp=${Temperature} ${Datadatens}"
 
