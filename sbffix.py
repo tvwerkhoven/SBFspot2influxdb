@@ -1,4 +1,4 @@
-#/usr/bin/env python3.7
+#!/usr/bin/env python3.7
 #
 # Fix gap in SBFspot nosql database SpotData table from CSV files
 #
