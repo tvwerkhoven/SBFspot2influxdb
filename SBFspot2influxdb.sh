@@ -12,7 +12,7 @@ show_help () {
 SBFCFG=/home/pi/workers/sbfspot/SBFspot.cfg
 # TODO: get this from the CSV file (might not always work?)
 DATASEP=";"
-INFLUXDBURI="http://localhost:8086/write?db=smarthome&precision=s"
+INFLUXDBURI="http://localhost:8086/write?db=smarthomev3&precision=s"
 
 # A POSIX variable
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
@@ -170,6 +170,6 @@ Datadatens=$(date -d "${Datadate##* }" +%s)
 # systemv2 sma=${Temperature} ${Datadatens}"
 
 # No need for power, we calculate it ourselves
-curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energyv2 sma=${ETotal} ${Datadatens}
-systemv2 sma_temp=${Temperature} ${Datadatens}"
+curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energyv3,quantity=electricity,type=production,source=sma value=${ETotal} ${Datadatens}
+temperaturev3,quantity=actual,source=sma,location=device value=${Temperature} ${Datadatens}"
 
