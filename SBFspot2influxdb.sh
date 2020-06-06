@@ -17,11 +17,7 @@ INFLUXDBURI="http://localhost:8086/write?db=smarthomev3&precision=s"
 # A POSIX variable
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
-# Initialize our own variables:
-output_file=""
-verbose=0
-
-while getopts "h?vf:" opt; do
+while getopts "h?cfi:" opt; do
     case "$opt" in
     h|\?)
         show_help
@@ -40,29 +36,29 @@ shift $((OPTIND-1))
 [ "${1:-}" = "--" ] && shift
 
 # If datafile not given as argument, find ourselves
-if [ -z ${DATAFILE} ]; then
+if [ -z "${DATAFILE}" ]; then
 	echo "Finding data file"
 	# Get output path from config. Use tail to skip any duplicate entries, use 
 	# cut to select actual value after =, use f2- to select all fields after =, 
 	# in case dirname contains =, remove trailing newline/carriage return
-	CFGOUTPUTPATH=$(grep ^OutputPath= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
-	CFGPLANTNAME=$(grep ^Plantname= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
-	CFGCSV_Export=$(grep ^CSV_Export= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
+	CFGOUTPUTPATH=$(grep ^OutputPath= "${SBFCFG}" | tail -n1 | cut -f2- -d= | tr -d '\n\r')
+	CFGPLANTNAME=$(grep ^Plantname= "${SBFCFG}" | tail -n1 | cut -f2- -d= | tr -d '\n\r')
+	CFGCSV_Export=$(grep ^CSV_Export= "${SBFCFG}" | tail -n1 | cut -f2- -d= | tr -d '\n\r')
 
 	# CSV export must be enabled. Add 0 to variable in case it's empty
-	if [[ $(($CFGCSV_Export+0)) -ne 1 ]]; then
+	if [[ $((CFGCSV_Export+0)) -ne 1 ]]; then
 		echo "This script only works with CSV export, aborting"
 		exit
 	fi
 
 	# Fill in date in path dynamically using date
-	OUTPATH=$(date +${CFGOUTPUTPATH} )
+	OUTPATH=$(date +"${CFGOUTPUTPATH}" )
 
 	# Find file, abort if it does not exist
 	DATAFILE=${OUTPATH}/${CFGPLANTNAME}-Spot-$(date "+%Y%m%d").csv
 fi
 
-if [[ ! -e ${DATAFILE} ]]; then
+if [[ ! -e "${DATAFILE}" ]]; then
 	echo "Datafile for today does not exist, nothing to update, aborting"
 	exit
 fi
@@ -129,15 +125,15 @@ Temperature_field=$((${#Temperature_field2}+1))
 
 # Get latest entries, query file only once (tail) to prevent race 
 # conditions/unique dataset. Replace commas by period for lua/influxdb
-LASTDATA=$(tail -n 1 ${DATAFILE} | tr ',' '.')
-Datadate=$(echo ${LASTDATA} | cut -f 1 -d ${DATASEP})
-PdcTot=$(echo ${LASTDATA} | cut -f ${PdcTot_field} -d ${DATASEP})
-PacTot=$(echo ${LASTDATA} | cut -f ${PacTot_field} -d ${DATASEP})
+LASTDATA=$(tail -n 1 "${DATAFILE}" | tr ',' '.')
+Datadate=$(echo "${LASTDATA}" | cut -f 1 -d ${DATASEP})
+PdcTot=$(echo "${LASTDATA}" | cut -f ${PdcTot_field} -d ${DATASEP})
+PacTot=$(echo "${LASTDATA}" | cut -f ${PacTot_field} -d ${DATASEP})
 # Multiply ETotal and EToday with 1000*3600 to convert kWh to Joule (SI)
 # Use lua as it's quite portable, see https://unix.stackexchange.com/a/40787
-ETotal=$(lua -e "print($(echo ${LASTDATA} | cut -f ${ETotal_field} -d ${DATASEP}) * 1000 * 3600)")
-EToday=$(lua -e "print($(echo ${LASTDATA} | cut -f ${EToday_field} -d ${DATASEP}) * 1000*3600)")
-Temperature=$(echo ${LASTDATA} | cut -f ${Temperature_field} -d ${DATASEP})
+ETotal=$(lua -e "print($(echo "${LASTDATA}" | cut -f ${ETotal_field} -d ${DATASEP}) * 1000 * 3600)")
+EToday=$(lua -e "print($(echo "${LASTDATA}" | cut -f ${EToday_field} -d ${DATASEP}) * 1000*3600)")
+Temperature=$(echo "${LASTDATA}" | cut -f ${Temperature_field} -d ${DATASEP})
 
 # Convert date to epoch (in UTC) for influxdb. We need this in case there was no
 # new data added to the file (e.g SBFspot failed), adding the timestamp will
@@ -170,6 +166,6 @@ Datadatens=$(date -d "${Datadate##* }" +%s)
 # systemv2 sma=${Temperature} ${Datadatens}"
 
 # No need for power, we calculate it ourselves
-curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energyv3,quantity=electricity,type=production,source=sma value=${ETotal} ${Datadatens}
+curl --max-time 5 -i -XPOST "${INFLUXDBURI}" --data-binary "energyv3,quantity=electricity,type=production,source=sma value=${ETotal} ${Datadatens}
 temperaturev3,quantity=actual,source=sma,location=device value=${Temperature} ${Datadatens}"
 
