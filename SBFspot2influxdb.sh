@@ -9,7 +9,7 @@ show_help () {
 }
 
 ### Default configuration
-SBFCFG=/home/pi/workers/sbfspot/SBFspot.cfg
+SBFCFG=/usr/local/bin/sbfspot.3/SBFspot.cfg
 # TODO: get this from the CSV file (might not always work?)
 DATASEP=";"
 INFLUXDBURI="http://localhost:8086/write?db=smarthomev3&precision=s"
