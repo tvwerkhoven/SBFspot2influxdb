@@ -9,6 +9,7 @@ show_help () {
 }
 
 ### Default configuration
+SCRIPTNAME=$(basename $0)
 SBFCFG=/usr/local/bin/sbfspot.3/SBFspot.cfg
 # TODO: get this from the CSV file (might not always work?)
 DATASEP=";"
@@ -37,7 +38,7 @@ shift $((OPTIND-1))
 
 # If datafile not given as argument, find ourselves
 if [ -z "${DATAFILE}" ]; then
-	echo "Finding data file"
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.debug "Finding data file"
 	# Get output path from config. Use tail to skip any duplicate entries, use 
 	# cut to select actual value after =, use f2- to select all fields after =, 
 	# in case dirname contains =, remove trailing newline/carriage return
@@ -47,7 +48,7 @@ if [ -z "${DATAFILE}" ]; then
 
 	# CSV export must be enabled. Add 0 to variable in case it's empty
 	if [[ $((CFGCSV_Export+0)) -ne 1 ]]; then
-		echo "This script only works with CSV export, aborting"
+		/usr/bin/logger -t ${SCRIPTNAME} -p user.error "This script only works with CSV export, aborting"
 		exit
 	fi
 
@@ -59,7 +60,7 @@ if [ -z "${DATAFILE}" ]; then
 fi
 
 if [[ ! -e "${DATAFILE}" ]]; then
-	echo "Datafile for today does not exist, nothing to update, aborting"
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.error "Datafile for today does not exist, nothing to update, aborting"
 	exit
 fi
 
@@ -103,8 +104,15 @@ HEADERS="dd/MM/yyyy HH:mm:ss;DeviceName;DeviceType;Serial;Pdc1;Pdc2;Idc1;Idc2;Ud
 # GridRelay	Closed
 # Temperature	30.54
 
+Uac1_field1=${HEADERS%%Uac1*}
+Uac1_field2=${Uac1_field1//[^$DATASEP]}
+Uac1_field=$((${#Uac1_field2}+1))
+
+# Strip everything until string 'PdcTot'
 PdcTot_field1=${HEADERS%%PdcTot*}
+# Strip everything except separator so we get N separators
 PdcTot_field2=${PdcTot_field1//[^$DATASEP]}
+# Get stringlength = number of separators = field index
 PdcTot_field=$((${#PdcTot_field2}+1))
 
 PacTot_field1=${HEADERS%%PacTot*}
@@ -115,25 +123,39 @@ ETotal_field1=${HEADERS%%ETotal*}
 ETotal_field2=${ETotal_field1//[^$DATASEP]}
 ETotal_field=$((${#ETotal_field2}+1))
 
+Frequency_field1=${HEADERS%%Frequency*}
+Frequency_field2=${Frequency_field1//[^$DATASEP]}
+Frequency_field=$((${#Frequency_field2}+1))
+
 EToday_field1=${HEADERS%%EToday*}
 EToday_field2=${EToday_field1//[^$DATASEP]}
 EToday_field=$((${#EToday_field2}+1))
+
+BT_Signal_field1=${HEADERS%%BT_Signal*}
+BT_Signal_field2=${BT_Signal_field1//[^$DATASEP]}
+BT_Signal_field=$((${#BT_Signal_field2}+1))
 
 Temperature_field1=${HEADERS%%Temperature*}
 Temperature_field2=${Temperature_field1//[^$DATASEP]}
 Temperature_field=$((${#Temperature_field2}+1))
 
-# Get latest entries, query file only once (tail) to prevent race 
+# Get latest entries, cache in variable to prevent race 
 # conditions/unique dataset. Replace commas by period for lua/influxdb
 LASTDATA=$(tail -n 1 "${DATAFILE}" | tr ',' '.')
+
+# Get elements
 Datadate=$(echo "${LASTDATA}" | cut -f 1 -d ${DATASEP})
+Uac1=$(echo "${LASTDATA}" | cut -f ${Uac1_field} -d ${DATASEP})
 PdcTot=$(echo "${LASTDATA}" | cut -f ${PdcTot_field} -d ${DATASEP})
 PacTot=$(echo "${LASTDATA}" | cut -f ${PacTot_field} -d ${DATASEP})
-# Multiply ETotal and EToday with 1000*3600 to convert kWh to Joule (SI)
+Frequency=$(echo "${LASTDATA}" | cut -f ${Frequency_field} -d ${DATASEP})
+BT_Signal=$(echo "${LASTDATA}" | cut -f ${BT_Signal_field} -d ${DATASEP})
+Temperature=$(echo "${LASTDATA}" | cut -f ${Temperature_field} -d ${DATASEP})
+
+# Multiply ETotal and EToday (floats) with 1000*3600 to convert kWh to Joule (SI)
 # Use lua as it's quite portable, see https://unix.stackexchange.com/a/40787
 ETotal=$(lua -e "print($(echo "${LASTDATA}" | cut -f ${ETotal_field} -d ${DATASEP}) * 1000 * 3600)")
 EToday=$(lua -e "print($(echo "${LASTDATA}" | cut -f ${EToday_field} -d ${DATASEP}) * 1000*3600)")
-Temperature=$(echo "${LASTDATA}" | cut -f ${Temperature_field} -d ${DATASEP})
 
 # Convert date to epoch (in UTC) for influxdb. We need this in case there was no
 # new data added to the file (e.g SBFspot failed), adding the timestamp will
@@ -159,13 +181,10 @@ Datadatens=$(date -d "${Datadate##* }" +%s)
 # power,type=elec,device=sma,subtype=dc value=${PdcTot} ${Datadatens}
 # temperature,type=device,device=sma value=${Temperature} ${Datadatens}"
 
-# New data architecture
-# curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energyv2 sma=${ETotal} ${Datadatens}
-# powerv2 sma_ac=${PacTot} ${Datadatens}
-# powerv2 sma_dc=${PdcTot} ${Datadatens}
-# systemv2 sma=${Temperature} ${Datadatens}"
-
 # No need for power, we calculate it ourselves
 curl --max-time 5 -i -XPOST "${INFLUXDBURI}" --data-binary "energyv3,quantity=electricity,type=production,source=sma value=${ETotal} ${Datadatens}
+systemv3,quantity=uac,source=sma value=${Uac1} ${Datadatens}
+systemv3,quantity=uacfrequency,source=sma value=${Frequency} ${Datadatens}
+systemv3,quantity=btsignal,source=sma value=${BT_Signal} ${Datadatens}
 temperaturev3,quantity=actual,source=sma,location=device value=${Temperature} ${Datadatens}"
 
