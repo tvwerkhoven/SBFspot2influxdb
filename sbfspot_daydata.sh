@@ -43,7 +43,7 @@ RET=$(timeout --kill-after 45 30 /usr/local/bin/sbfspot.3/SBFspot -ad0 -am0 -ae0
 # 250 for CRITICAL: Failed to initialize communication with inverter --> try again in 1min
 # 255 for CRITICAL: bthConnect() returned -1
 if [[ $? -eq 255 ]]; then
-	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "Error: ${RET}"
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "Error: $? ${RET}"
 	# Allow non-root to run hciconfig
 	# sudo setcap 'cap_net_raw,cap_net_admin+eip' /usr/bin/hciconfig
 	# Source: https://unix.stackexchange.com/questions/96106/bluetooth-le-scan-as-non-root
@@ -59,7 +59,7 @@ if [[ $? -eq 255 ]]; then
 	exit
 elif [[ $? -ne 0 ]]; then
 	# Other less fatal error occured, report, clean up, and try again later
-	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "Error: ${RET}"
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "Error: $? ${RET}"
 else
 	# Everything OK, push to influxdb if we have data
 	/home/tim/workers/SBFspot2influxdb/SBFspot2influxdb.sh
