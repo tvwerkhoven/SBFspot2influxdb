@@ -28,21 +28,21 @@ PIDFILE=/var/lock/sbfspot.pid
 # if [[ $? -eq 0 ]]; then
 if lockfile-check --lock-name ${PIDFILE}; then
 	/usr/bin/logger -t ${SCRIPTNAME} -p user.warning "Lockfile ${PIDFILE} already exists, quitting"
-	echo "exists: $?"
 	exit
 fi
 
 if ! lockfile-create --retry 0 --lock-name ${PIDFILE}; then
 	/usr/bin/logger -t ${SCRIPTNAME} -p user.warning "Could not create lock on ${PIDFILE}, quitting"
-	echo "cannot create"
 	exit
 fi
 
 # -ad0: no daily data -am0/ae0: no month/event history -q: quiet
 # stop process after 30s/kill after 45s to prevent run-away stuff
-echo "run"
 RET=$(timeout --kill-after 45 30 /usr/local/bin/sbfspot.3/SBFspot -ad0 -am0 -ae0 -q 2>&1)
-if [[ $? -ne 0 ]]; then
+# Return codes
+# 250 for CRITICAL: Failed to initialize communication with inverter --> try again in 1min
+# 255 for CRITICAL: bthConnect() returned -1
+if [[ $? -eq 255 ]]; then
 	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "Error: ${RET}"
 	# Allow non-root to run hciconfig
 	# sudo setcap 'cap_net_raw,cap_net_admin+eip' /usr/bin/hciconfig
@@ -57,10 +57,14 @@ if [[ $? -ne 0 ]]; then
 	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "SBFspot failed, resetting bluetooth and quitting so we pause for 5min"
 	hciconfig hci0 reset
 	exit
+elif [[ $? -ne 0 ]]; then
+	# Other less fatal error occured, report, clean up, and try again later
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "Error: ${RET}"
+else
+	# Everything OK, push to influxdb if we have data
+	/home/tim/workers/SBFspot2influxdb/SBFspot2influxdb.sh
 fi
 
-# Push to influxdb if we have data
-/home/tim/workers/SBFspot2influxdb/SBFspot2influxdb.sh
 
 if ! lockfile-remove --lock-name ${PIDFILE}; then
 	/usr/bin/logger -t ${SCRIPTNAME} -p user.warning "Could not remove lock on ${PIDFILE}, quitting"
