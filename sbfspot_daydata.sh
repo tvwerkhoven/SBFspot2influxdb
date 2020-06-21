@@ -18,6 +18,7 @@
 # because the lock file is invalid if the PID process is gone.
 
 
+SCRIPTNAME=$(basename $0)
 # Run only if no others run
 # https://stackoverflow.com/questions/1715137/what-is-the-best-way-to-ensure-only-one-instance-of-a-bash-script-is-running
 # Using PID can be confusing if testing from shell scripts
@@ -26,13 +27,13 @@ PIDFILE=/var/lock/sbfspot.pid
 # lockfile-check --use-pid --lock-name ${PIDFILE}
 # if [[ $? -eq 0 ]]; then
 if lockfile-check --lock-name ${PIDFILE}; then
-	logger -p user.warning "Lockfile ${PIDFILE} already exists, quitting"
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.warning "Lockfile ${PIDFILE} already exists, quitting"
 	echo "exists: $?"
 	exit
 fi
 
 if ! lockfile-create --retry 0 --lock-name ${PIDFILE}; then
-	logger -p user.warning "Could not create lock on ${PIDFILE}, quitting"
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.warning "Could not create lock on ${PIDFILE}, quitting"
 	echo "cannot create"
 	exit
 fi
@@ -42,7 +43,7 @@ fi
 echo "run"
 RET=$(timeout --kill-after 45 30 /usr/local/bin/sbfspot.3/SBFspot -ad0 -am0 -ae0 -q 2>&1)
 if [[ $? -ne 0 ]]; then
-	logger -p user.err "${RET}"
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "Error: ${RET}"
 	# Allow non-root to run hciconfig
 	# sudo setcap 'cap_net_raw,cap_net_admin+eip' /usr/bin/hciconfig
 	# Source: https://unix.stackexchange.com/questions/96106/bluetooth-le-scan-as-non-root
@@ -53,8 +54,7 @@ if [[ $? -ne 0 ]]; then
 
 	# Restart bluetooth in case of failure, we get CRITICAL: bthConnect() returned -1
 	# regularly and this seems to fix it (no idea why)
-	echo "failed"
-	logger -p user.err "SBFspot failed, resetting bluetooth and quitting so we pause for 5min"
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "SBFspot failed, resetting bluetooth and quitting so we pause for 5min"
 	hciconfig hci0 reset
 	exit
 fi
@@ -63,7 +63,7 @@ fi
 /home/tim/workers/SBFspot2influxdb/SBFspot2influxdb.sh
 
 if ! lockfile-remove --lock-name ${PIDFILE}; then
-	logger -p user.warning "Could not remove lock on ${PIDFILE}, quitting"
+	/usr/bin/logger -t ${SCRIPTNAME} -p user.warning "Could not remove lock on ${PIDFILE}, quitting"
 	exit
 fi
 
