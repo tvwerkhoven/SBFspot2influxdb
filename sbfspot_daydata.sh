@@ -18,7 +18,7 @@
 # because the lock file is invalid if the PID process is gone.
 
 
-SCRIPTNAME=$(basename $0)
+SCRIPTNAME=$(basename "$0")
 # Run only if no others run
 # https://stackoverflow.com/questions/1715137/what-is-the-best-way-to-ensure-only-one-instance-of-a-bash-script-is-running
 # Using PID can be confusing if testing from shell scripts
@@ -27,23 +27,24 @@ PIDFILE=/var/lock/sbfspot.pid
 # lockfile-check --use-pid --lock-name ${PIDFILE}
 # if [[ $? -eq 0 ]]; then
 if lockfile-check --lock-name ${PIDFILE}; then
-	/usr/bin/logger -t ${SCRIPTNAME} -p user.warning "Lockfile ${PIDFILE} already exists, quitting"
+	/usr/bin/logger -t "${SCRIPTNAME}" -p user.warning "Lockfile ${PIDFILE} already exists, quitting"
 	exit
 fi
 
 if ! lockfile-create --retry 0 --lock-name ${PIDFILE}; then
-	/usr/bin/logger -t ${SCRIPTNAME} -p user.warning "Could not create lock on ${PIDFILE}, quitting"
+	/usr/bin/logger -t "${SCRIPTNAME}" -p user.warning "Could not create lock on ${PIDFILE}, quitting"
 	exit
 fi
 
 # -ad0: no daily data -am0/ae0: no month/event history -q: quiet
-# stop process after 30s/kill after 45s to prevent run-away stuff
-RET=$(timeout --kill-after 45 30 /usr/local/bin/sbfspot.3/SBFspot -ad0 -am0 -ae0 -q 2>&1)
+# stop process after 35s/kill after 45s to prevent run-away stuff
+RET=$(timeout --kill-after 45 35 /usr/local/bin/sbfspot.3/SBFspot -ad0 -am0 -ae0 -v 2>&1)
+STATUS=$?
 # Return codes
 # 250 for CRITICAL: Failed to initialize communication with inverter --> try again in 1min
 # 255 for CRITICAL: bthConnect() returned -1
-if [[ $? -eq 255 ]]; then
-	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "Error: $? ${RET}"
+if [[ ${STATUS} -eq 255 ]]; then
+	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "Error: ${STATUS} ${RET}"
 	# Allow non-root to run hciconfig
 	# sudo setcap 'cap_net_raw,cap_net_admin+eip' /usr/bin/hciconfig
 	# Source: https://unix.stackexchange.com/questions/96106/bluetooth-le-scan-as-non-root
@@ -54,12 +55,12 @@ if [[ $? -eq 255 ]]; then
 
 	# Restart bluetooth in case of failure, we get CRITICAL: bthConnect() returned -1
 	# regularly and this seems to fix it (no idea why)
-	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "SBFspot failed, resetting bluetooth and quitting so we pause for 5min"
+	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "SBFspot failed, resetting bluetooth and quitting so we pause for 5min"
 	hciconfig hci0 reset
 	exit
-elif [[ $? -ne 0 ]]; then
-	# Other less fatal error occured, report, clean up, and try again later
-	/usr/bin/logger -t ${SCRIPTNAME} -p user.err "Error: $? ${RET}"
+elif [[ ${STATUS} -ne 0 ]]; then
+	# Other less fatal error occured: report, clean up, and try again later
+	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "Error: ${STATUS} ${RET}"
 else
 	# Everything OK, push to influxdb if we have data
 	/home/tim/workers/SBFspot2influxdb/SBFspot2influxdb.sh
@@ -67,7 +68,7 @@ fi
 
 
 if ! lockfile-remove --lock-name ${PIDFILE}; then
-	/usr/bin/logger -t ${SCRIPTNAME} -p user.warning "Could not remove lock on ${PIDFILE}, quitting"
+	/usr/bin/logger -t "${SCRIPTNAME}" -p user.warning "Could not remove lock on ${PIDFILE}, quitting"
 	exit
 fi
 
