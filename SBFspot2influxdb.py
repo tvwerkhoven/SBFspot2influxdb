@@ -36,12 +36,15 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 	Read data from SBFspot database
 	"""
 
-	# default sbfformat is "month"
-	database = "MonthData"
-	fields = MONTHFIELDS
 	if (sbfformat == "spot"):
 		database = "SpotData"
 		fields = SPOTFIELDS
+	elif (sbfformat == "day"):
+		database = "DayData"
+		fields = MONTHFIELDS
+	elif (sbfformat == "month"):
+		database = "MonthData"
+		fields = MONTHFIELDS
 
 	# Build list of keys from fields string for dict building lateron
 	fields_keys = fields.split(",")
@@ -49,7 +52,7 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 	# default unit is 'native' which has multiplication factors 1
 	conv_factor = [1] * len(fields_keys)
 	if (unit == "SI"):
-		if (sbfformat == "month"):
+		if (sbfformat == "month" or sbfformat == "day"):
 			# Find fields TotalYield and DayYield and set conversion factor to 
 			# 3600 for Wh to J
 			conv_factor[fields_keys.index("TotalYield")] = 3600
@@ -72,7 +75,7 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 	for idx, r in enumerate(rows):
 
 		# Store totalyield to check changes since last measurement
-		if (sbfformat == "month"):
+		if (sbfformat == "month" or sbfformat == "day"):
 			thisTotalYield = r[fields_keys.index("TotalYield")]
 		elif (sbfformat == "spot"):
 			thisTotalYield = r[fields_keys.index("ETotal")]
@@ -84,11 +87,12 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 		# Convert rows into dict by adding keys from field names
 		dictrow = {key:val*f for key, val, f in zip(fields_keys, r, conv_factor)}
 
-		# For month format, set date to end of day (23:59), because we show 
-		# the day's value. Epochs don't have DST so we can simply add a fixed
-		# offset
+		# For month format, we get a date without time. Since the value shown 
+		# on this date is the end of day value, we add 24h to get midnight of
+		# the next day. Epochs don't have DST so we can simply add a fixed
+		# offset.
 		if (sbfformat == "month"):
-			dictrow['TimeStamp'] += 86340
+			dictrow['TimeStamp'] += 86400
 			#datetime.datetime.fromtimestamp(r[0]) + datetime.timedelta(days=1) - datetime.timedelta(minutes=1)
 
 		# Construct line protocol string based on query template
@@ -122,10 +126,10 @@ def test_influxquery(influxquery, sbfformat):
 	"""
 	Test if query format is OK and fields are correct
 	"""
-	if sbfformat == 'month':
-		fields = MONTHFIELDS
-	else:
+	if sbfformat == 'spot':
 		fields = SPOTFIELDS
+	else:
+		fields = MONTHFIELDS
 
 	fields_keys = fields.split(",")
 	dictrow = {key:val for key, val in zip(fields_keys, range(len(fields_keys)))}
@@ -150,9 +154,9 @@ parser.add_argument("--includezero", action="store_true",
 	help="Also include entries with no change in power/yield. By default \
 	only data with changes since previous measurement are included.")
 
-parser.add_argument("--sbfformat", choices=("spot", "month"), default="month",
-	help=f"choose format to read: month or spot format. Month format supports \
-	{MONTHFIELDS} Spot format supports {SPOTFIELDS}")
+parser.add_argument("--sbfformat", choices=("spot", "month", "day"),  \
+	default="month", help=f"choose format to read: day, month or spot format. \
+	Day & month format supports {MONTHFIELDS} Spot format supports {SPOTFIELDS}")
 parser.add_argument('--sbfcfg', type=str, metavar="SBFspot.cfg", default=None,
 	help='SBFspot configuration file')
 parser.add_argument('--sbfdb', type=str, metavar="path", default=None, 
