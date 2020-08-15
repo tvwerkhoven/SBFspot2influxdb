@@ -64,7 +64,7 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 	conn = sqlite3.connect(sbfdb)
 	c = conn.cursor()
 	
-	query = "SELECT {fields} FROM {database} ORDER BY TimeStamp ASC".format(fields=fields, database=database)
+	query = f"SELECT {fields} FROM {database} ORDER BY TimeStamp ASC"
 	rows = c.execute(query)
 
 	post_data = ""
@@ -118,7 +118,6 @@ def push_influx_data(post_data, influxhost, influxdb):
 	except requests.exceptions.ConnectionError:
 		raise requests.exceptions.ConnectionError("Update failed due to refused connection. Is influxdb running?")
 
-
 def test_influxquery(influxquery, sbfformat):
 	"""
 	Test if query format is OK and fields are correct
@@ -152,8 +151,8 @@ parser.add_argument("--includezero", action="store_true",
 	only data with changes since previous measurement are included.")
 
 parser.add_argument("--sbfformat", choices=("spot", "month"), default="month",
-	help="choose format to read: month or spot format. Month format supports \
-	{} Spot format supports {}".format(MONTHFIELDS, SPOTFIELDS))
+	help=f"choose format to read: month or spot format. Month format supports \
+	{MONTHFIELDS} Spot format supports {SPOTFIELDS}")
 parser.add_argument('--sbfcfg', type=str, metavar="SBFspot.cfg", default=None,
 	help='SBFspot configuration file')
 parser.add_argument('--sbfdb', type=str, metavar="path", default=None, 
