@@ -14,6 +14,7 @@ import requests
 import sqlite3
 
 # Fields in SQLite databases MonthData and SpotData
+DAYFIELDS = "TimeStamp,Serial,TotalYield,Power"
 MONTHFIELDS = "TimeStamp,Serial,TotalYield,DayYield"
 SPOTFIELDS = "TimeStamp,Serial,Pdc1,Pdc2,Idc1,Idc2,Udc1,Udc2,Pac1,Pac2,Pac3,Iac1,Iac2,Iac3,Uac1,Uac2,Uac3,EToday,ETotal,Frequency,OperatingTime,FeedInTime,BT_Signal,Status,GridRelay,Temperature"
 
@@ -41,7 +42,7 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 		fields = SPOTFIELDS
 	elif (sbfformat == "day"):
 		database = "DayData"
-		fields = MONTHFIELDS
+		fields = DAYFIELDS
 	elif (sbfformat == "month"):
 		database = "MonthData"
 		fields = MONTHFIELDS
@@ -52,7 +53,11 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 	# default unit is 'native' which has multiplication factors 1
 	conv_factor = [1] * len(fields_keys)
 	if (unit == "SI"):
-		if (sbfformat == "month" or sbfformat == "day"):
+		if (sbfformat == "day"):
+			# Find fields TotalYield and DayYield and set conversion factor to 
+			# 3600 for Wh to J
+			conv_factor[fields_keys.index("TotalYield")] = 3600
+		elif (sbfformat == "month"):
 			# Find fields TotalYield and DayYield and set conversion factor to 
 			# 3600 for Wh to J
 			conv_factor[fields_keys.index("TotalYield")] = 3600
