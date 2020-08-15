@@ -12,6 +12,7 @@
 import argparse
 import requests
 import sqlite3
+from datetime import datetime
 
 # Fields in SQLite databases MonthData and SpotData
 DAYFIELDS = "TimeStamp,Serial,TotalYield,Power"
@@ -32,7 +33,7 @@ def read_sbfspot_cfg(sbfcfg):
 	sbfconfig.read_string(config_string)
 	return sbfconfig
 
-def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False, unit="native", sbfformat='month', dry=False):
+def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False, unit="native", sbfformat='month', history=0):
 	"""
 	Read data from SBFspot database
 	"""
@@ -71,8 +72,10 @@ def read_sbfspot_db(sbfdb, influxquery, influxhost, influxdb, includezero=False,
 	# Connect and query database
 	conn = sqlite3.connect(sbfdb)
 	c = conn.cursor()
+
+	whereclause = "" if history == 0 else "WHERE TimeStamp > {} ".format(int(datetime.now().timestamp()) - (history * 86400))
 	
-	query = f"SELECT {fields} FROM {database} ORDER BY TimeStamp ASC"
+	query = f"SELECT {fields} FROM {database} {whereclause}ORDER BY TimeStamp ASC"
 	rows = c.execute(query)
 
 	post_data = ""
@@ -158,6 +161,9 @@ parser.add_argument("--unit", choices=("native", "SI"), default="native",
 parser.add_argument("--includezero", action="store_true",
 	help="Also include entries with no change in power/yield. By default \
 	only data with changes since previous measurement are included.")
+parser.add_argument("--history", type=int, metavar="days", default=0,
+	help="Number of days of history to include. Set to 0 for all data \
+	(default).")
 
 parser.add_argument("--sbfformat", choices=("spot", "month", "day"),  \
 	default="month", help=f"choose format to read: day, month or spot format. \
@@ -184,7 +190,7 @@ test_influxquery(args.influxquery, args.sbfformat)
 
 # Add newline for influxdb, difficult to enter via command line
 args.influxquery += "\n"
-sbfdata = read_sbfspot_db(args.sbfdb, args.influxquery, args.influxdb[0], args.influxdb[1], includezero=args.includezero, unit=args.unit, sbfformat=args.sbfformat)
+sbfdata = read_sbfspot_db(args.sbfdb, args.influxquery, args.influxdb[0], args.influxdb[1], includezero=args.includezero, unit=args.unit, sbfformat=args.sbfformat, history=args.history)
 
 # CFGOUTPUTPATH=$(grep ^OutputPath= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
 # CFGPLANTNAME=$(grep ^Plantname= ${SBFCFG} | tail -n1 | cut -f2- -d= | tr -d '\n\r')
