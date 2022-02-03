@@ -38,7 +38,7 @@ fi
 
 # -ad0: no daily data -am0/ae0: no month/event history -q: quiet
 # stop process after 35s/kill after 45s to prevent run-away stuff
-RET=$(timeout --kill-after 45 35 /usr/local/bin/sbfspot.3/SBFspot -ad0 -am0 -ae0 -v 2>&1)
+RET=$(timeout --kill-after 45 35 /usr/local/bin/sbfspot.3/SBFspot -ad0 -am0 -ae0  2>&1)
 STATUS=$?
 # Return codes
 # 250 for CRITICAL: Failed to initialize communication with inverter --> try again in 1min
@@ -57,7 +57,11 @@ if [[ ${STATUS} -eq 255 ]]; then
 	# regularly and this seems to fix it (no idea why)
 	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "SBFspot failed, resetting bluetooth and quitting so we pause for 5min"
 	hciconfig hci0 reset
+	# Also restart bluetooth service
+	# (Ensure to allow user to restart service - https://unix.stackexchange.com/questions/192706/)
+	/usr/bin/systemctl restart bluetooth.service
 	exit
+	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "SBFspot connection failed, will retry next run."
 elif [[ ${STATUS} -ne 0 ]]; then
 	# Other less fatal error occured: report, clean up, and try again later
 	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "Error: ${STATUS} ${RET}"
