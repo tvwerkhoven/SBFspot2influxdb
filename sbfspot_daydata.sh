@@ -38,7 +38,7 @@ fi
 
 # -ad0: no daily data -am0/ae0: no month/event history -q: quiet
 # stop process after 35s/kill after 45s to prevent run-away stuff
-RET=$(timeout --kill-after 45 35 /usr/local/bin/sbfspot.3/SBFspot -ad0 -am0 -ae0  2>&1)
+RET=$(timeout --kill-after 45 35 /usr/local/bin/sbfspot.3/SBFspot -ad0 -am0 -ae0 -mqtt 2>&1)
 STATUS=$?
 # Return codes
 # 250 for CRITICAL: Failed to initialize communication with inverter --> try again in 1min
