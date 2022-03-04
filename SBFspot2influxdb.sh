@@ -174,6 +174,10 @@ EToday=$(lua -e "print($(echo "${LASTDATA}" | cut -f ${EToday_field} -d ${DATASE
 #Datadate="11/11/2018 12:06:29"
 Datadatens=$(date -d "${Datadate##* }" +%s)
 
+# Future fix: this works a bit better
+	# read DD MM YYYY hh mm ss <<< ${datestr//[\/:]/ }
+	# Datadatens=$(date -d "${YYYY}-${MM}-${DD} ${hh}:${mm}:${ss}" +%s)
+
 # Post to influxdb, add explicit timestamp to each measurement
 # https://docs.influxdata.com/influxdb/v1.7/tools/api/
 # curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "energy,type=elec,device=sma value=${ETotal} ${Datadatens}
