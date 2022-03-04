@@ -57,9 +57,11 @@ if [[ ${STATUS} -eq 255 ]]; then
 	# regularly and this seems to fix it (no idea why)
 	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "SBFspot failed, resetting bluetooth and quitting so we pause for 5min"
 	hciconfig hci0 reset
+
 	# Also restart bluetooth service
 	# (Ensure to allow user to restart service - https://unix.stackexchange.com/questions/192706/)
-	/usr/bin/systemctl restart bluetooth.service
+	sleep 1
+	sudo /usr/bin/systemctl restart bluetooth.service
 	exit
 	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "SBFspot connection failed, will retry next run."
 elif [[ ${STATUS} -ne 0 ]]; then
