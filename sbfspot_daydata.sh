@@ -43,7 +43,7 @@ STATUS=$?
 # Return codes
 # 250 for CRITICAL: Failed to initialize communication with inverter --> try again in 1min
 # 255 for CRITICAL: bthConnect() returned -1
-if [[ ${STATUS} -eq 255 ]]; then
+if [[ ${STATUS} -ne 0 ]]; then
 	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "Error: ${STATUS} ${RET}"
 	# Allow non-root to run hciconfig
 	# sudo setcap 'cap_net_raw,cap_net_admin+eip' /usr/bin/hciconfig
@@ -64,9 +64,6 @@ if [[ ${STATUS} -eq 255 ]]; then
 	sudo /usr/bin/systemctl restart bluetooth.service
 	exit
 	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "SBFspot connection failed, will retry next run."
-elif [[ ${STATUS} -ne 0 ]]; then
-	# Other less fatal error occured: report, clean up, and try again later
-	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "Error: ${STATUS} ${RET}"
 else
 	# Everything OK, push to influxdb if we have data
 	/home/tim/workers/SBFspot2influxdb/SBFspot2influxdb.sh
