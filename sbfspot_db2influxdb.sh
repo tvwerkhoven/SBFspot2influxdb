@@ -4,7 +4,7 @@
 # From https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
 show_help () {
 	echo "Push updated SBFspot database to InfluxDB"
-	echo "${0} -h -d [path to SBFspot.db] -i [influx URI] [querydate in YYYMMDD (today)]"
+	echo "${0} -h -d [path to SBFspot.db] -i [influx URI]"
 }
 
 ### Default configuration
@@ -13,8 +13,6 @@ SCRIPTNAME=$(basename $0)
 SBFSPOTDB=/var/lib/sbfspot/SBFspot.db
 # InfluxDB URI where we should post to
 INFLUXDBURI="http://localhost:8086/write?db=smarthomev3&precision=s"
-# Date to query (default: today)
-QUERYDATE=$(date "+%Y%m%d")
 
 # A POSIX variable
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
