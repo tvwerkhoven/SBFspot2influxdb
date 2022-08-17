@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# SBFspot2influxdb.sh
 # Call this script after running SBFspot to push updated month-data CSV files to InfluxDB
 
 
