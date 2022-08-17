@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# SBFspot2influxdb.sh
 # Call this script after running SBFspot to push updated CSV files to influxdb
 
 # From https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
 
 show_help () {
-	echo "Push updated SBFspot day-data Spot-CSV files to InfluxDB"
+	echo "Push updated SBFspot Spot-CSV files to InfluxDB"
 	echo "${0} -h -f <DATAFILE> -c <SBFspot.cfg path> -i <influx URI>"
 }
 
