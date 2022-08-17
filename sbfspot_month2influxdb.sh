@@ -118,7 +118,7 @@ while read dataline; do
 	# Calculate total energy in Joule (from kWh) and date in epoch (in UTC) for influxdb via lua. We concatenate in 1 call for speed.
 	read Datadatens ETotal <<< $(lua -e "print(os.time{year=${YYYY}, month=${MM}, day=${DD}, hour=${hh}, min=${mm}, sec=${ss}},${ETotal} * 1000 * 3600)")
 
-	THISLINE="_test_sbfspot,quantity=electricity,type=production,source=sma value=${ETotal} ${Datadatens}
+	THISLINE="energyv3,quantity=electricity,type=production,source=sma value=${ETotal} ${Datadatens}
 "
 	INFLUXQUERY="${INFLUXQUERY}${THISLINE}"
 done <<< "$(tail -n +10 ${DATAFILE1})"
