@@ -1,20 +1,9 @@
 #!/usr/bin/env bash
 # SBFspot2influxdb.sh
 # Call this script after running SBFspot to push updated month-data CSV files to InfluxDB
-#
-# Layout
-# 
-# - read command line parms or config file
-# -- check if config file exists
-# - reconstruct filenaming (e.g. /var/lib/sbfspot/2022/Kreek15PV-20220701.csv)
-# -- OutputPath --> complete with date()
-# -- Plantname
-# - for last X days, read files, push to influxdb per line or batch?
-# -- date(OutputPath)/Plantname-YYYYMMDD.csv
-# -- 
+
 
 # From https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
-
 show_help () {
 	echo "Push updated SBFspot month-data CSV files to InfluxDB"
 	echo "${0} -h -c [SBFspot.cfg path] -i [influx URI] [querydate in YYYMMDD (today)]"
