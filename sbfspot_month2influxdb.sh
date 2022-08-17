@@ -108,27 +108,17 @@ while read dataline; do
 		break
 	fi
 
-	# Calculate total energy in Joule (from kWh) via lua
-	ETotal=$(lua -e "print(${ETotal} * 1000 * 3600)")
-
-	# Convert date to epoch (in UTC) for influxdb. We need this in case there was no
-	# new data added to the file (e.g SBFspot failed), adding the timestamp will
-	# silently overwrite the previous datapoint.
-	#
-	# - We use only the time of the datetime stamp in the file so date(1) will add
-	#   the date itself. This is done because date(1) assumes MM/DD/YYYY date 
-	#   formats incompatible with SBFspot log files. Alternative: use 
-	#   dateutils.strptime -i "%d/%M/%Y %H:%M:%S" ${Datadate} or something similar
-	# - We don't need to add --utc as %s already converts to seconds since Epoch 
-	#   UTC.
-	# - We use second precision (not ms/ns) which is the same resolution as 
-	#   source data
-	#
-	#Datadate="11/11/2018 12:06:29"
+	# Unpack date string
+	# datestr="11/11/2018 12:06:29"
 	# datestr="31/01/2022 03:00:00"
+	# datestr="25/02/2022 12:00:00"
+	# datestr="15/06/2022 04:00:00"
 	read DD MM YYYY hh mm ss <<< ${datestr//[\/:]/ }
-	Datadatens=$(date -d "${YYYY}-${MM}-${DD} ${hh}:${mm}:${ss}" +%s)
-	THISLINE="energyv3,quantity=electricity,type=production,source=sma value=${ETotal} ${Datadatens}
+
+	# Calculate total energy in Joule (from kWh) and date in epoch (in UTC) for influxdb via lua. We concatenate in 1 call for speed.
+	read Datadatens ETotal <<< $(lua -e "print(os.time{year=${YYYY}, month=${MM}, day=${DD}, hour=${hh}, min=${mm}, sec=${ss}},${ETotal} * 1000 * 3600)")
+
+	THISLINE="_test_sbfspot,quantity=electricity,type=production,source=sma value=${ETotal} ${Datadatens}
 "
 	INFLUXQUERY="${INFLUXQUERY}${THISLINE}"
 done <<< "$(tail -n +10 ${DATAFILE1})"
