@@ -44,7 +44,9 @@ STATUS=$?
 # 250 for CRITICAL: Failed to initialize communication with inverter --> try again in 1min
 # 255 for CRITICAL: bthConnect() returned -1
 if [[ ${STATUS} -ne 0 ]]; then
+	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "SBFspot failed, resetting bluetooth and quitting so we pause for 5min"
 	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "Error: ${STATUS} ${RET}"
+
 	# Allow non-root to run hciconfig
 	# sudo setcap 'cap_net_raw,cap_net_admin+eip' /usr/bin/hciconfig
 	# Source: https://unix.stackexchange.com/questions/96106/bluetooth-le-scan-as-non-root
@@ -55,8 +57,8 @@ if [[ ${STATUS} -ne 0 ]]; then
 
 	# Restart bluetooth in case of failure, we get CRITICAL: bthConnect() returned -1
 	# regularly and this seems to fix it (no idea why)
-	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "SBFspot failed, resetting bluetooth and quitting so we pause for 5min"
-	hciconfig hci0 reset
+	# Disabled, only restart bluetooth service could/should be enough?
+	# hciconfig hci0 reset
 
 	# Also restart bluetooth service
 	# (Ensure to allow user to restart service - https://unix.stackexchange.com/questions/192706/)
@@ -69,7 +71,7 @@ else
 	/home/tim/workers/SBFspot2influxdb/SBFspot2influxdb.sh
 fi
 
-
+# Remove lockfile upon successful script completion
 if ! lockfile-remove --lock-name ${PIDFILE}; then
 	/usr/bin/logger -t "${SCRIPTNAME}" -p user.warning "Could not remove lock on ${PIDFILE}, quitting"
 	exit
