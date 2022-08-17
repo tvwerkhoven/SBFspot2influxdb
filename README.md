@@ -1,51 +1,42 @@
 # sbfspot2influxdb
 
-Convert sbfspot data to influxdb line protocol and insert to database
+Convert SBFspot data (of various formats) to InfluxDB line protocol and insert to database so I can collect my home automation data in InfluxDB.
 
-# Repair from csv history file
+*N.B.* Your InfluxDB architecture (measurements/tags/units etc) is likely different, so you'll have to edit these scripts to adjust for this. Also, `precision=s` is required in the InfluxDB call since timestamps are given in seconds.
 
-Given Kreek15PV-202002\*csv files, read, fix date format to ISO, convert kWh to
-Joule, then push to influxdb. Can be used in case regular sbfspot script 
-failed to back-insert historical data.
+# All data from SBFspot.db
 
-	_lastenergyjoule=0
-	for _file in Kreek15PV-202002{19..24}.csv; do
-	 tail -n +10 "${_file}" | while read -r _line; do
-	  IFS=';' read -ra _lineel <<< "${_line}"
-	  _energyjoule=$(lua -e "print(${_lineel[1]} * 1000*3600)")
-	  if [[ ( "${_line:11:8}" != "00:00:00" ) && ( "${_energyjoule}" -ne "${_lastenergyjoule}" ) ]]; then
-	  	_dateiso="${_line:6:4}/${_line:3:2}/${_line:0:2} ${_line:11:8}"
-	  	_datestr=$(date -d "${_dateiso}" +%s)
-	    #echo ${_file} - ${_datestr} - ${_lineel[1]} - ${_energyjoule}
-	    echo energyv3,quantity=electricity,type=production,source=sma value=${_energyjoule} ${_datestr}
-	  fi
-	  _lastenergyjoule=${_energyjoule}
-	 done
-	done > 20200301_influxdb_fix.txt
+This script reads the TotalYield field from DayData from `SBFspot.db` and pushes it to influxdb in batches of 200 lines. It's probably the most versatile and fastest if you want to edit something that suits your needs.
 
-	INFLUXDBURI="http://localhost:8086/write?db=smarthomev3&precision=s"
-	curl -i -XPOST ${INFLUXDBURI} --data-binary @20200301_influxdb_fix.txt
+Syntax (using command line params):
 
-Read line, split by ;
+	  ./sbfspot_db2influxdb.sh -d /var/lib/sbfspot/SBFspot.db -i http://localhost:8086/write?db=yourdatabase&precision=s
 
-	IFS=';' read -ra _lineel <<< "${_line}"
-Convert kWh to Joule using lua
+Syntax (using embedded defaults):
 
-	_energyjoule=$(lua -e "print(${_lineel[1]} * 1000*3600)")
+	./sbfspot_db2influxdb.sh
 
-Only update if not first measurment of day (time = 00:00:00) and new value
 
-	if [[ ( "${_line:11:8}" != "00:00:00" ) && ( "${_energyjoule}" -ne "${_lastenergyjoule}" ) ]]; then
-Convert date from
+# Latest data from spot csv files
 
-	"24/02/2020 23:55:00"
-to 
+This script reads the newest `<plant>-Spot-YYYYMMDD.csv` file and pushes the newest measurement in that file to InfluxDB. Can be used for live updating, i.e. run SBFspot first, then this script.
 
-	"2020/02/24 23:55:00"
-using
+Syntax (get datafile from config file):
 
-	${_line:6:4}/${_line:3:2}/${_line:0:2}
+	./sbfspot_day2influxdb.sh -c /usr/local/bin/sbfspot.3/SBFspot.cfg -i http://localhost:8086/write?db=yourdatabase&precision=s
 
-then convert to datetime with date
-	
-	_datestr=$(date -d "${_dateiso}" +%s)
+Syntax (get datafile directly):
+
+	./sbfspot_day2influxdb.sh -f ${OUTPATH}/${CFGPLANTNAME}-Spot-$(date "+%Y%m%d").csv -i http://localhost:8086/write?db=yourdatabase&precision=s
+
+# All data from regular csv files
+
+This script reads `<plant>-YYYYMMDD.csv` files and pushes all entries to InfluxDB. You can loop this script to push multiple dates.
+
+Syntax:
+
+	./sbfspot_day2influxdb.sh -c /usr/local/bin/sbfspot.3/SBFspot.cfg -i http://localhost:8086/write?db=yourdatabase&precision=s 20220817
+
+Syntax (as loop, to push the last 100 days to InfluxDB, using embedded defaults):
+
+	for d in $(seq -1 -1 -100); do time ./sbfspot_month2influxdb.sh -- "${d} days"; done
