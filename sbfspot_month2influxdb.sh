@@ -71,7 +71,7 @@ if [ -z "${DATAFILEBASE}" ]; then
 	fi
 
 	# Fill in date in path dynamically using date
-	OUTPATH=$(date +"${CFGOUTPUTPATH}" )
+	OUTPATH=$(date +"${CFGOUTPUTPATH}" --date "${QUERYDATE}")
 
 	# Find file, abort if it does not exist
 	DATAFILEBASE=${OUTPATH}/${CFGPLANTNAME}-
