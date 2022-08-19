@@ -3,8 +3,8 @@
 
 # From https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
 show_help () {
-	echo "Push updated SBFspot database to InfluxDB"
-	echo "${0} -h -d [path to SBFspot.db] -i [influx URI]"
+	echo "Push SBFspot database (of last N days) to InfluxDB"
+	echo "${0} -h -d [path to SBFspot.db] -i [influx URI] [days to push (default=all)]"
 }
 
 ### Default configuration
@@ -30,6 +30,14 @@ while getopts "h?cfi:" opt; do
     esac
 done
 
+shift $((OPTIND-1))
+[ "${1:-}" = "--" ] && shift
+
+# Check starting time, default is 0 (all data since epoch), else number of days since today.
+STARTTIME=0
+[ -n "${1}" ] && NDAYS=${1} && shift
+STARTTIME=$(date +"%s" --date "${NDAYS} day ago")
+
 # Loop over lines in file
 INFLUXQUERY=""
 LOOPCOUNT=0
@@ -47,5 +55,5 @@ while read dataline; do
 		INFLUXQUERY=""
 	fi
 # Query database, convert TotalYield from Wh to Joule, prepare in right format, i.e. ${ETotal} ${Datadatens}
-done <<< "$(sqlite3 -list -separator ' ' ${SBFSPOTDB} "SELECT TotalYield*3600,TimeStamp FROM DayData;")"
+done <<< "$(sqlite3 -list -separator ' ' ${SBFSPOTDB} "SELECT TotalYield*3600,TimeStamp FROM DayData WHERE TimeStamp > ${STARTTIME};")"
 
