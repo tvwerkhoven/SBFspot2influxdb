@@ -50,7 +50,7 @@ while read dataline; do
 
 	# Push to influxdb every 200 lines, reset collection and continue
 	if [[ ${LOOPCOUNT} -gt 200 ]]; then
-		curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "${INFLUXQUERY}"
+		curl --max-time 5 --silent -XPOST ${INFLUXDBURI} --data-binary "${INFLUXQUERY}"
 		LOOPCOUNT=0
 		INFLUXQUERY=""
 	fi
@@ -58,5 +58,5 @@ while read dataline; do
 done <<< "$(sqlite3 -list -separator ' ' ${SBFSPOTDB} "SELECT TotalYield*3600,TimeStamp FROM DayData WHERE TimeStamp > ${STARTTIME};")"
 
 # Push final (<200) data entries 
-curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "${INFLUXQUERY}"
+curl --max-time 5 --silent -XPOST ${INFLUXDBURI} --data-binary "${INFLUXQUERY}"
 
