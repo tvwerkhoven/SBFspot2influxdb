@@ -68,7 +68,7 @@ if [[ ${STATUS} -ne 0 ]]; then
 	/usr/bin/logger -t "${SCRIPTNAME}" -p user.err "SBFspot connection failed, will retry next run."
 else
 	# Everything OK, push to influxdb if we have data
-	/home/tim/workers/SBFspot2influxdb/SBFspot2influxdb.sh
+	/home/tim/workers/SBFspot2influxdb/sbfspot_day2influxdb.sh
 fi
 
 # Remove lockfile upon successful script completion
