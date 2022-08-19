@@ -57,3 +57,6 @@ while read dataline; do
 # Query database, convert TotalYield from Wh to Joule, prepare in right format, i.e. ${ETotal} ${Datadatens}
 done <<< "$(sqlite3 -list -separator ' ' ${SBFSPOTDB} "SELECT TotalYield*3600,TimeStamp FROM DayData WHERE TimeStamp > ${STARTTIME};")"
 
+# Push final (<200) data entries 
+curl --max-time 5 -i -XPOST ${INFLUXDBURI} --data-binary "${INFLUXQUERY}"
+
